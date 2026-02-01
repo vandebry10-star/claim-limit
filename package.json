@@ -1,6 +1,5 @@
 {
-  "name": "claim-azbry",
+  "name": "claim-limit-azbry",
   "version": "1.0.0",
-  "private": true,
   "type": "module"
 }
