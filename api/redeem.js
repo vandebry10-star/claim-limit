@@ -1,25 +1,39 @@
-// api/redeem.js
+import crypto from 'crypto'
+
+const SECRET = process.env.CLAIM_SECRET || 'azbry-secret'
+
+function sign(data) {
+  return crypto
+    .createHmac('sha256', SECRET)
+    .update(data)
+    .digest('hex')
+}
+
 export default function handler(req, res) {
   const { code } = req.query
-  if (!code) return res.status(400).json({ status: false })
+  if (!code) return res.json({ status: false })
 
-  const store = global.claimStore || {}
-
-  const entry = Object.values(store).find(
-    v => v.code === code && !v.used
-  )
-
-  if (!entry) {
-    return res.status(400).json({
-      status: false,
-      message: 'Kode tidak valid / sudah dipakai'
-    })
+  const [b64, sig] = code.split('.')
+  if (!b64 || !sig) {
+    return res.json({ status: false, message: 'Kode rusak' })
   }
 
-  entry.used = true
+  const payload = Buffer.from(b64, 'base64').toString()
+  const expected = sign(payload)
 
-  return res.json({
+  if (sig !== expected) {
+    return res.json({ status: false, message: 'Kode tidak valid' })
+  }
+
+  const data = JSON.parse(payload)
+  const today = new Date().toISOString().slice(0, 10)
+
+  if (data.date !== today) {
+    return res.json({ status: false, message: 'Kode kadaluarsa' })
+  }
+
+  res.json({
     status: true,
-    reward: entry.reward
+    reward: data.reward
   })
 }
