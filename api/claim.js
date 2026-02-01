@@ -1,33 +1,42 @@
-import store from '../lib/store.js'
+import fs from 'fs'
+import path from 'path'
 
-function randomCode(len = 8) {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  let out = ''
-  for (let i = 0; i < len; i++) {
-    out += chars[Math.floor(Math.random() * chars.length)]
-  }
-  return out
+const storePath = path.join(process.cwd(), 'data/store.json')
+
+function loadStore() {
+  return JSON.parse(fs.readFileSync(storePath, 'utf8'))
+}
+
+function saveStore(data) {
+  fs.writeFileSync(storePath, JSON.stringify(data, null, 2))
 }
 
 export default function handler(req, res) {
-  const { sid } = req.query
-  if (!sid) return res.status(400).send('Invalid session')
-
-  if (store.sessions[sid]) {
-    return res.send('<h2>❌ Session sudah dipakai</h2>')
+  const { code } = req.query
+  if (!code) {
+    return res.status(400).json({ status:false, message:'Kode kosong' })
   }
 
-  const code = randomCode()
-  store.sessions[sid] = true
-  store.codes[code] = { used: false }
+  const store = loadStore()
+  const token = store.tokens[code]
 
-  res.setHeader('Content-Type', 'text/html')
-  res.send(`
-    <h1>🎉 Claim Limit Kamu</h1>
-    <p>Terima kasih sudah melewati iklan 🙏</p>
-    <h3>Kode kamu:</h3>
-    <code style="font-size:24px">${code}</code>
-    <p><br>Gunakan di grup:</p>
-    <b>.claim ${code}</b>
-  `)
+  if (!token) {
+    return res.status(404).json({ status:false, message:'Kode tidak valid' })
+  }
+
+  if (token.used) {
+    return res.status(403).json({ status:false, message:'Kode sudah dipakai' })
+  }
+
+  token.used = true
+  token.usedAt = Date.now()
+  saveStore(store)
+
+  res.json({
+    status: true,
+    reward: {
+      limit: 10,
+      exp: 5000
+    }
+  })
 }
