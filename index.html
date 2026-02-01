@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Claim Limit Azbry</title>
+</head>
+<body>
+  <h2>🎉 Terima kasih sudah melewati iklan</h2>
+  <button onclick="claim()">Ambil Kode</button>
+
+  <pre id="result"></pre>
+
+  <script>
+    async function claim() {
+      const res = await fetch('/api/claim')
+      const json = await res.json()
+      document.getElementById('result').innerText =
+        'Kode kamu: ' + json.code +
+        '\nGunakan di grup: .redeem ' + json.code
+    }
+  </script>
+</body>
+</html>
